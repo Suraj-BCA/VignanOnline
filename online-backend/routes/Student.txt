@@ -1,0 +1,612 @@
+const express = require("express");
+const router = express.Router();
+const Student = require("../models/Student");
+const Course = require("../models/Course");
+const subject = require("../models/Subject");
+const multer = require('multer');
+
+const mongoose = require("mongoose")
+
+router.get("/all-students", async (req, res) => {
+  try {
+    console.log("Fetching students...");
+    const students = await Student.find().populate("course");
+    console.log("Students fetched:", students);
+
+    if (!students) {
+      return res.status(404).json({ error: "No students found" });
+    }
+    res.json(students);
+  } catch (error) {
+    console.error("Error fetching students:", error.message); // Log detailed error
+    res
+      .status(500)
+      .json({ error: "Error fetching students", details: error.message });
+  }
+});
+
+
+router.get("/students", async (req, res) => {
+  try {
+    const { branch, year, semester } = req.query;
+
+    // Validate query parameters
+    if (!branch || !year || !semester) {
+      return res.status(400).json({ message: "Branch, year, and semester are required." });
+    }
+
+    // Fetch students from the database
+    const students = await Student.find({
+      branch: branch,
+      year: parseInt(year),
+      semester: parseInt(semester),
+    });
+
+    // Return the list of students
+    res.status(200).json({ students });
+  } catch (error) {
+    console.error("Error fetching students:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+
+router.post("/add-student", async (req, res) => {
+  try {
+    console.log("📥 Incoming Student Data:", req.body); // Debugging line
+
+    const {
+      firstName,
+      lastName,
+      email,
+      phone,
+      rollNumber,
+      courseId,
+      year,
+      semester,
+      password,
+      joiningDate,
+      dob,
+      gender,
+      fatherName,
+      motherName,
+      address,
+    } = req.body;
+
+    // Validate required fields
+    if (!courseId) {
+      console.log("❌ Missing Course ID");
+      return res.status(400).json({ error: "Course ID is required" });
+    }
+
+    // Check if the course exists
+    const course = await Course.findById(courseId);
+    if (!course) {
+      console.log("❌ Course not found for ID:", courseId);
+      return res.status(404).json({ error: "Course not found" });
+    }
+
+    // Check for duplicate email
+    const existingEmail = await Student.findOne({ email });
+    if (existingEmail) {
+      console.log("❌ Student with this Email already exists!");
+      return res
+        .status(400)
+        .json({ error: "Student with this Email already exists!" });
+    }
+
+    // Check for duplicate rollNumber
+    const existingStudent = await Student.findOne({ rollNumber });
+    if (existingStudent) {
+      console.log("❌ Student with this Roll Number already exists!");
+      return res
+        .status(400)
+        .json({ error: "Student with this Roll Number already exists!" });
+    }
+
+    // Create a new student
+    const newStudent = new Student({
+      firstName,
+      lastName,
+      email,
+      phone,
+      rollNumber,
+      year,
+      semester,
+      password,
+      joiningDate,
+      dob,
+      gender,
+      fatherName,
+      motherName,
+      address,
+      course: courseId,
+    });
+
+    // Save the student to the database
+    await newStudent.save();
+
+    // Add the student to the course's students array
+    await Course.findByIdAndUpdate(courseId, {
+      $push: { students: newStudent._id },
+    });
+
+    // Send success response
+    res
+      .status(201)
+      .json({ message: "✅ Student added successfully!", student: newStudent });
+  } catch (error) {
+    console.error("🔥 Server Error:", error.message);
+    res
+      .status(500)
+      .json({ error: "Failed to add student", details: error.message });
+  }
+});
+
+
+router.post("/upload-student", async (req, res) => {
+  try {
+    const students = req.body; // Excel se data aaya
+
+    const errors = [];
+    const savedStudents = [];
+
+    for (const student of students) {
+      const existingEmail = await Student.findOne({ email: student.email });
+      const existingRoll = await Student.findOne({ rollNumber: student.rollNumber });
+
+      if (existingEmail || existingRoll) {
+        errors.push({
+          email: student.email,
+          rollNumber: student.rollNumber,
+          error: "❌ Duplicate Entry",
+        });
+      } else {
+        const newStudent = new Student(student);
+        await newStudent.save();
+        savedStudents.push(newStudent);
+      }
+    }
+
+    if (errors.length > 0) {
+      return res.status(400).json({ errors, message: "❌ Some students were duplicates and not added." });
+    }
+
+    res.status(201).json({ message: "✅ Students uploaded successfully!", savedStudents });
+  } catch (error) {
+    console.error("Upload Error:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+
+
+router.get("/student/:id", async (req, res) => {
+  try {
+    const student = await Student.findById(req.params.id)
+      .populate("course", "name")
+      .populate({ path: "marks.subject", select: "name" });
+
+    console.log("✅ Student Data Sent:", student);
+    res.json(student);
+  } catch (error) {
+    res.status(500).json({
+      message: "Error fetching student details",
+      details: error.message,
+    });
+  }
+});
+
+// Update Student Marks
+router.put("/student/:id/marks", async (req, res) => {
+  try {
+    const { year, semester, marks } = req.body;
+    console.log("🛠 Incoming Update Request:", JSON.stringify(req.body, null, 2));
+
+    if (!year || !semester || !marks || !Array.isArray(marks)) {
+      return res.status(400).json({ error: "Invalid request format" });
+    }
+
+    const student = await Student.findById(req.params.id);
+    if (!student) {
+      return res.status(404).json({ error: "Student not found" });
+    }
+
+    if (!Array.isArray(student.marks)) {
+      student.marks = [];
+    }
+
+    marks.forEach(({ subject, ...scores }) => {
+      if (!subject || !mongoose.Types.ObjectId.isValid(subject)) {
+        console.error("❌ Skipping invalid subject ID:", subject, scores);
+        return;
+      }
+
+      const subjectId = new mongoose.Types.ObjectId(subject);
+      console.log("📌 Searching for subjectId:", subjectId.toString());
+
+      const existingMark = student.marks.find(
+        (m) => m.subject && m.subject.toString() === subjectId.toString()
+      );
+
+      if (existingMark) {
+        existingMark.scores = { ...existingMark.scores, ...scores };
+      } else {
+        student.marks.push({ subject: subjectId, scores });
+      }
+    });
+
+    await student.save();
+    res.json({ message: "Marks updated successfully", student });
+  } catch (error) {
+    console.error("❌ Error updating marks:", error);
+    res.status(500).json({ error: "Internal Server Error", details: error.message });
+  }
+});
+
+
+
+
+router.get("/add-student/:courseId", async (req, res) => {
+  try {
+    const { courseId } = req.params;
+    const course = await Course.findById(courseId).populate("students");
+
+    if (!course) {
+      return res.status(404).json({ error: "Course not found" });
+    }
+
+    res.json({ students: course.students });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ error: "Error fetching students", details: error.message });
+  }
+});
+
+// ✅ 3️⃣ Get a Single Student (With Course & Subjects)
+router.get("/student/:id", async (req, res) => {
+  try {
+    const student = await Student.findById(req.params.id)
+      .populate("course", "name") // Fetch Course Name
+      .populate({ path: "marks.subject", select: "name" }); // Fetch Subject Names
+
+    if (!student) {
+      return res.status(404).json({ message: "Student not found!" });
+    }
+    res.json(student);
+  } catch (error) {
+    res
+      .status(500)
+      .json({
+        message: "Error fetching student details",
+        details: error.message,
+      });
+  }
+});
+
+router.put("/update-student/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    let updateData = req.body;
+
+    // ✅ Ensure course is an ObjectId
+    if (updateData.course && typeof updateData.course === "string") {
+      const courseData = await Course.findOne({ name: updateData.course });
+      if (courseData) {
+        updateData.course = courseData._id; // Convert to ObjectId
+      } else {
+        return res.status(400).json({ error: "Invalid Course Name" });
+      }
+    }
+
+    console.log("📝 Final Update Data:", updateData);
+
+    const updatedStudent = await Student.findByIdAndUpdate(id, updateData, {
+      new: true,
+    });
+
+    if (!updatedStudent) {
+      return res.status(404).json({ error: "Student not found" });
+    }
+
+    res.json(updatedStudent);
+  } catch (error) {
+    console.error("🔥 Error updating student:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+
+// ✅ 5️⃣ Delete a Student (And Remove from Course)
+router.delete("/delete-student/:id", async (req, res) => {
+  try {
+    const deletedStudent = await Student.findByIdAndDelete(req.params.id);
+
+    if (!deletedStudent) {
+      return res.status(404).json({ error: "Student not found" });
+    }
+
+    // Remove Student from Course
+    await Course.findByIdAndUpdate(deletedStudent.course, {
+      $pull: { students: deletedStudent._id },
+    });
+
+    res.json({ message: "Student deleted successfully!" });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ error: "Error deleting student", details: error.message });
+  }
+});
+
+
+// ✅ Student Login Route (Without JWT)
+router.post("/student-login", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    const student = await Student.findOne({ email });
+
+    if (!student) {
+      return res.status(404).json({ error: "Student not found" });
+    }
+
+    if (student.password !== password) {
+      return res.status(400).json({ error: "Incorrect password" });
+    }
+
+    res.status(200).json({ message: "Login successful!", student });
+  } catch (error) {
+    console.error("🔥 Server Error:", error);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+router.get("/student-dashboard/:email", async (req, res) => {
+  try {
+    const student = await Student.findOne({ email: req.params.email })
+      .populate({
+        path: "course",
+        populate: { path: "subjects" }, // Populate subjects inside course
+      });
+
+    if (!student) {
+      return res.status(404).json({ error: "Student not found" });
+    }
+
+    res.json({
+      firstName: student.firstName,
+      lastName: student.lastName,
+      course: student.course,
+    });
+  } catch (error) {
+    res.status(500).json({ error: "Server error", details: error.message });
+  }
+});
+
+
+
+
+router.post("/get-student", async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: "Email is required" });
+
+    const student = await Student.findOne({ email }).populate("course");
+
+    if (!student) return res.status(404).json({ error: "Student not found" });
+
+    res.json({ student, course: student.course });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch student data" });
+  }
+});
+
+
+router.get("/all-students/:facultyId", async (req, res) => {
+  try {
+    const faculty = await faculty.findById(req.params.facultyId);
+    if (!faculty) {
+      return res.status(404).json({ message: "Faculty not found" });
+    }
+
+    const students = await students.find({ course: faculty.department });
+    res.json(students);
+  } catch (error) {
+    res.status(500).json({ message: "Server Error", error });
+  }
+});
+
+
+
+// router.get("/students", async (req, res) => {
+//   try {
+//     const { branch, year, semester } = req.query;
+//     console.log("Received Params:", { branch, year, semester });
+
+//     if (!branch || !year || !semester) {
+//       return res.status(400).json({ message: "Missing parameters" });
+//     }
+
+//     const course = await Course.findOne({ name: branch }).populate("subjects.subjects");
+
+//     if (!course) {
+//       return res.status(404).json({ message: "Course not found" });
+//     }
+
+//     console.log("Course Data:", JSON.stringify(course, null, 2));
+
+//     const subjectData = course.subjects.find(
+//       (s) => s.year === parseInt(year) && s.semester === parseInt(semester)
+//     );
+
+//     console.log("Filtered Subject Data:", subjectData);
+
+//     if (!subjectData) {
+//       return res.status(404).json({ message: "Subjects not found for selected year and semester" });
+//     }
+
+//     // ✅ Properly populate students
+//     const students = await Student.find({
+//       course: course._id,  
+//       year: Number(year),
+//       semester: Number(semester),
+//     }).populate("course").lean();
+
+//     res.json({
+//       subjects: subjectData.subjects,
+//       students: students, 
+//     });
+//   } catch (error) {
+//     console.error("Error fetching data:", error);
+//     res.status(500).json({ message: "Internal Server Error", error });
+//   }
+// });
+
+
+
+
+
+// Update marks for students
+
+
+router.post("/update-marks", async (req, res) => {
+  try {
+    const { branch, year, semester, subject, marks } = req.body;
+
+    for (const rollNumber in marks) {
+      await Student.updateOne(
+        { rollNumber, branch, year, semester },
+        { $set: { [`marks.${subject}`]: marks[rollNumber] } }
+      );
+    }
+
+    res.json({ message: "Marks updated successfully" });
+  } catch (error) {
+    console.error("Error updating marks:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
+
+router.get("/student/students", async (req, res) => {
+  try {
+    const { branch, year, semester } = req.query;
+    
+    if (!branch || !year || !semester) {
+      return res.status(400).json({ error: "Missing parameters" });
+    }
+
+    const students = await Student.find({ branch, year, semester });
+
+    res.json(students);
+  } catch (error) {
+    console.error("Error fetching students:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+router.post("/student/update-marks", async (req, res) => {
+  try {
+    const { branch, year, semester, subject, marks } = req.body;
+
+    if (!branch || !year || !semester || !subject || !marks) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
+
+    console.log("Received Data:", req.body); // Debugging
+
+    for (let rollNumber in marks) {
+      const student = await Student.findOne({ rollNumber, year, semester });
+
+      if (!student) {
+        console.log(`Student not found: ${rollNumber}`);
+        continue;
+      }
+
+      let subjectFound = false;
+
+      student.marks.forEach((mark) => {
+        if (mark.subject.toString() === subject) {
+          mark.scores = { ...mark.scores, ...marks[rollNumber] };
+          subjectFound = true;
+        }
+      });
+
+      if (!subjectFound) {
+        student.marks.push({
+          subject,
+          scores: marks[rollNumber],
+        });
+      }
+
+      await student.save();
+    }
+
+    res.status(200).json({ message: "Marks updated successfully" });
+  } catch (error) {
+    console.error("Error updating marks:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
+router.get("/student-info", async (req, res) => {
+  const { email } = req.query;
+  if (!email) {
+    return res.status(400).json({ error: "Email is required" });
+  }
+
+  try {
+    const student = await Student.findOne({ email });
+    if (!student) {
+      return res.status(404).json({ error: "Student not found" });
+    }
+
+    res.json({
+      name: student.name,
+      course: student.course,
+      year: student.year,
+      semester: student.semester,
+    });
+  } catch (error) {
+    console.error("Error fetching student info:", error);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+
+const storage = multer.memoryStorage();
+const upload = multer({ storage });
+
+// Upload Route for Excel File
+router.post("/student/upload-marks", async (req, res) => {
+  const { branch, year, semester, subject, marks } = req.body;
+
+  // Validate input
+  if (!branch || !year || !semester || !subject || !marks) {
+    return res.status(400).json({ error: "Missing required fields." });
+  }
+
+  try {
+    // Update student marks for the given subject
+    for (const rollNumber in marks) {
+      const scores = marks[rollNumber];
+
+      await Student.updateOne(
+        { rollNumber, "marks.subject": subject },
+        { $set: { "marks.$.scores": scores } }
+      );
+    }
+
+    res.json({ message: "Marks uploaded successfully." });
+  } catch (error) {
+    console.error("Server Error:", error);
+    res.status(500).json({ error: "Failed to upload marks." });
+  }
+});
+
+
+
+
+module.exports = router;

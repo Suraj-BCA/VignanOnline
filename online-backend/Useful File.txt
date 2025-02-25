@@ -1,0 +1,402 @@
+// const express = require('express');
+// const mongoose = require('mongoose');
+// const bodyParser = require('body-parser');
+const cors = require('cors');
+// const studentRoutes = require('./routes/StudentRoutes');
+
+
+
+// require('dotenv').config();
+
+// const app = express();
+// app.use(cors());
+// app.use(bodyParser.json());
+// app.use('/api/students', studentRoutes);
+
+
+// mongoose
+//   .connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
+//   .then(() => console.log('MongoDB Connected'))
+//   .catch((err) => console.error(err));
+
+// const userSchema = new mongoose.Schema(
+//   {
+//     username: { type: String, required: true },
+//     email: { type: String, required: true, unique: true },
+//     phone: { type: String, required: true },
+//     password: { type: String, required: true },
+//   },
+//   { timestamps: true }
+// );
+
+// const User = mongoose.model('User', userSchema);
+
+// app.post('/register', async (req, res) => {
+//   try {
+//     const { username, email, phone, password } = req.body;
+
+//     if (!username || !email || !phone || !password) {
+//       return res.status(400).json({ message: 'All fields are required!' });
+//     }
+
+//     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+//     const passwordRegex =
+//       /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#])[A-Za-z\d@$!%*?&#]{6,}$/;
+
+//     if (!emailRegex.test(email)) {
+//       return res.status(400).json({ message: 'Invalid email format!' });
+//     }
+
+//     if (!passwordRegex.test(password)) {
+//       return res.status(400).json({
+//         message:
+//           'Password must be at least 6 characters long, include one uppercase letter, one lowercase letter, one special character, and one number.',
+//       });
+//     }
+
+//     const existingUser = await User.findOne({ email });
+//     if (existingUser) {
+//       return res.status(400).json({ message: 'Email already exists!' });
+//     }
+
+//     const newUser = new User({ username, email, phone, password });
+//     await newUser.save();
+
+//     res.status(201).json({ message: 'User registered successfully!' });
+//   } catch (error) {
+//     console.error(error);
+//     res.status(500).json({ message: 'Server error. Please try again later.' });
+//   }
+// });
+
+
+// app.post('/api/users/login', async (req, res) => {
+//   try {
+//     const { email, password } = req.body;
+
+//     if (!email || !password) {
+//       return res.status(400).json({ message: 'Email and password are required!' });
+//     }
+
+//     const user = await User.findOne({ email, password });
+//     if (!user) {
+//       return res.status(400).json({ message: 'Invalid email or password!' });
+//     }
+
+//     res.status(200).json({ message: 'Login successful!' });
+//   } catch (error) {
+//     console.error('Login error:', error);
+//     res.status(500).json({ message: 'Error logging in user', error });
+//   }
+// });
+
+
+
+// app.put('/users/:id', async (req, res) => {
+//   try {
+//     const { username, email, phone, password } = req.body;
+//     const userId = req.params.id;
+
+//     if (!username || !email || !phone || !password) {
+//       return res.status(400).json({ message: 'All fields are required!' });
+//     }
+
+//     const updatedUser = await User.findByIdAndUpdate(
+//       userId,
+//       { username, email, phone, password },
+//       { new: true }
+//     );
+
+//     if (!updatedUser) {
+//       return res.status(404).json({ message: 'User not found' });
+//     }
+
+//     res.status(200).json(updatedUser);
+//   } catch (error) {
+//     console.error('Error updating user details:', error);
+//     res.status(500).json({ message: 'Error updating user details', error });
+//   }
+// });
+
+// app.get('/users/:id?', async (req, res) => {
+//   try {
+//     const userId = req.params.id;
+
+//     if (userId) {
+//       const user = await User.findById(userId);
+
+//       if (!user) {
+//         return res.status(404).json({ message: 'User not found' });
+//       }
+
+//       return res.status(200).json(user);
+//     } else {
+//       const users = await User.find();
+//       res.status(200).json(users);
+//     }
+//   } catch (error) {
+//     console.error('Error fetching users:', error);
+//     res.status(500).json({ message: 'Error fetching users' });
+//   }
+// });
+
+// // app.put('/api/subjects/:id', async (req, res) => {
+// //   try {
+// //     const subjectId = req.params.id; // Get the subject ID from the URL params
+// //     const updatedMarks = req.body.marks; // Get the marks to update from the request body
+
+// //     if (!updatedMarks) {
+// //       return res.status(400).json({ message: 'Marks data is required!' });
+// //     }
+
+// //     // Find the subject by ID and update the marks
+// //     const updatedSubject = await Subject.findByIdAndUpdate(
+// //       subjectId,
+// //       { marks: updatedMarks },
+// //       { new: true } // Return the updated document
+// //     );
+
+// //     if (!updatedSubject) {
+// //       return res.status(404).json({ message: 'Subject not found!' });
+// //     }
+
+// //     res.status(200).json({ message: 'Marks updated successfully!', updatedSubject });
+// //   } catch (error) {
+// //     console.error('Error updating marks:', error);
+// //     res.status(500).json({ message: 'Error updating marks', error });
+// //   }
+// // });
+
+
+
+// app.get('/userprofile/:id', async (req, res) => {
+//   try {
+//     const userId = req.params.id;
+//     const user = await User.findById(userId);
+
+//     if (!user) {
+//       return res.status(404).json({ message: 'User not found' });
+//     }
+
+//     res.status(200).json(user);
+//   } catch (error) {
+//     console.error('Error fetching user details:', error);
+//     res.status(500).json({ message: 'Error fetching user details' });
+//   }
+// });
+
+
+
+
+
+// // app.put('/api/subjects/:id', async (req, res) => {
+// //   try {
+// //     const subjectId = req.params.id; 
+// //     const updatedMarks = req.body.marks; 
+
+// //     if (!updatedMarks) {
+// //       return res.status(400).json({ message: 'Marks data is required!' });
+// //     }
+
+// //     const updatedSubject = await Subject.findByIdAndUpdate(
+// //       subjectId,
+// //       { marks: updatedMarks },
+// //       { new: true, runValidators: true } 
+// //     );
+
+// //     if (!updatedSubject) {
+// //       return res.status(404).json({ message: 'Subject not found!' });
+// //     }
+
+// //     res.status(200).json({ message: 'Marks updated successfully!', updatedSubject });
+// //   } catch (error) {
+// //     console.error('Error updating marks:', error);
+// //     res.status(500).json({ message: 'Error updating marks', error });
+// //   }
+// // });
+
+
+// app.get('/api/dashboard', async (req, res) => {
+//   try {
+//     const usersCount = await User.countDocuments();
+//     const totalCourses = 10;
+//     const newUsers = 5; 
+
+//     res.json({
+//       totalUsers: usersCount,
+//       totalCourses: totalCourses,
+//       newUsers: newUsers,
+//     });
+//   } catch (error) {
+//     console.error('Error fetching dashboard data:', error);
+//     res.status(500).json({ message: 'Error fetching dashboard data', error });
+//   }
+// });
+
+
+// const courseSchema = new mongoose.Schema({
+//   name: { type: String, required: true },
+//   description: { type: String },
+//   instructor: { type: String },
+// });
+
+// // const subjectSchema = new mongoose.Schema({
+// //   name: String, 
+// //   year: String, 
+// //   semester: String,  
+// //   marks: {
+// //     T1: { type: Number },
+// //     T2: { type: Number },
+// //     T3: { type: Number, default: -1 },
+// //     T4: { type: Number, default: -1 },
+// //     T5: { type: Number, default: -1 },
+// //     External: { type: Number, default: -1 },
+// //   }
+// // });
+
+// // const Subject = mongoose.model('Subject', subjectSchema);
+// // module.exports = Subject;
+
+// // app.get('/api/subjects/:year/:sem', async (req, res) => {
+// //   try {
+// //     const { year, sem } = req.params;
+// //     const subjects = await Subject.find({ year, semester: sem });
+
+// //     if (!subjects) {
+// //       return res.status(404).json({ message: 'No subjects found for this semester' });
+// //     }
+
+// //     res.json(subjects);
+// //   } catch (error) {
+// //     console.error(error);
+// //     res.status(500).json({ message: 'Error fetching subjects' });
+// //   }
+// // });
+
+// app.put('/userprofile/:id', async (req, res) => {
+//   try {
+//     const { username, email, phone, password } = req.body;
+//     const userId = req.params.id;
+
+//     if (!username || !email || !phone || !password) {
+//       return res.status(400).json({ message: 'All fields are required!' });
+//     }
+
+//     const updatedUser = await User.findByIdAndUpdate(
+//       userId,
+//       { username, email, phone, password },
+//       { new: true } // Return the updated document
+//     );
+
+//     if (!updatedUser) {
+//       return res.status(404).json({ message: 'User not found!' });
+//     }
+
+//     res.status(200).json({ message: 'User profile updated successfully!', updatedUser });
+//   } catch (error) {
+//     console.error('Error updating user profile:', error);
+//     res.status(500).json({ message: 'Error updating user profile', error });
+//   }
+// });
+
+
+
+// const Course = mongoose.model('Course', courseSchema);
+
+// app.post('/courses', async (req, res) => {
+//   try {
+//     const { name, description, instructor } = req.body;
+//     if (!name || !instructor) {
+//       return res.status(400).json({ message: 'Name and instructor are required!' });
+//     }
+
+//     const newCourse = new Course({ name, description, instructor });
+//     await newCourse.save();
+
+//     res.status(201).json({ message: 'Course added successfully!' });
+//   } catch (error) {
+//     console.error('Error adding course:', error);
+//     res.status(500).json({ message: 'Error adding course' });
+//   }
+// });
+
+// app.put('/api/students/:id', async (req, res) => {
+//   const { id } = req.params;
+
+//   if (!mongoose.Types.ObjectId.isValid(id)) {
+//     return res.status(400).json({ error: 'Invalid ID format' });
+//   }
+
+//   try {
+//     const updatedStudent = await Student.findByIdAndUpdate(id, req.body, {
+//       new: true,
+//       runValidators: true,
+//     });
+//     if (!updatedStudent) {
+//       return res.status(404).json({ error: 'Student not found' });
+//     }
+//     res.status(200).json(updatedStudent);
+//   } catch (error) {
+//     console.error('Error updating student:', error.message);
+//     res.status(500).json({ error: 'Failed to update student' });
+//   }
+// });
+
+
+
+
+
+
+// app.post('/api/students', async (req, res) => {
+//   try {
+//     const student = new Student(req.body);
+//     await student.save();
+//     res.status(201).json({ message: 'Student added successfully!' });
+//   } catch (error) {
+//     console.error('Error adding student:', error);
+//     res.status(500).json({ message: 'Error adding student' });
+//   }
+// });
+
+
+
+
+
+// const PORT = process.env.PORT || 5000;
+// app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+
+// server.js
+// server.js
+const express = require('express');
+const mongoose = require('mongoose');
+const bodyParser = require('body-parser');
+// const cors = require('cors'); // Import CORS middleware
+
+const studentRoutes = require('./routes/StudentRoutes');
+
+const app = express();
+
+// Enable CORS
+app.use(cors({
+  origin: 'http://localhost:3000', // Allow requests from frontend
+  methods: ['GET', 'POST', 'PUT', 'DELETE'], // Allowed methods
+  allowedHeaders: ['Content-Type', 'Authorization'] // Allowed headers
+}));
+
+// Middleware
+app.use(bodyParser.json());
+
+// MongoDB connection
+mongoose.connect('mongodb://localhost:27017/vignanonline')
+  .then(() => console.log('MongoDB Connected'))
+  .catch(err => console.log('MongoDB Connection Error:', err));
+
+// Use student routes
+app.use('/api', studentRoutes);
+
+// Server setup
+const port = 5000;
+app.listen(port, () => {
+  console.log(`Server running on port ${port}`);
+});
