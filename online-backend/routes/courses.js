@@ -1,8 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const Course = require('../models/Course');  // Ensure model file exists
+const Course = require('../models/Course');  
 
-// 🛠️ Specific subject route ko pehle define karo
 router.get("/courses/:courseId/years-and-semesters", async (req, res) => {
   try {
     const { courseId } = req.params;
@@ -21,7 +20,6 @@ router.get("/courses/:courseId/years-and-semesters", async (req, res) => {
   }
 });
 
-// Fetch subjects for a course, year, and semester
 router.get("/courses/:courseId/subjects", async (req, res) => {
   try {
     const { courseId } = req.params;
@@ -52,28 +50,6 @@ router.get("/courses/:courseId/subjects", async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
-
-// router.get("/courses/:courseId/subjects", async (req, res) => {
-//   try {
-//     const { courseId } = req.params;
-//     const { year, semester } = req.query;
-
-//     const course = await Course.findById(courseId);
-
-//     if (!course) {
-//       return res.status(404).json({ error: "Course not found" });
-//     }
-
-//     const subjects = course.subjects.filter(
-//       (s) => s.year == year && s.semester == semester
-//     );
-
-//     res.json(subjects);
-//   } catch (error) {
-//     res.status(500).json({ error: error.message });
-//   }
-// });
-
 
 router.get("/courses/:id", async (req, res) => {
   try {
@@ -112,7 +88,6 @@ router.post("/courses", async (req, res) => {
   }
 });
 
-
 router.post("/add-course", async (req, res) => {
   console.log("🛠️ Received Course Data:", req.body); 
 
@@ -126,7 +101,6 @@ router.post("/add-course", async (req, res) => {
   }
 });
 
-
 router.get('/courses', async (req, res) => {
   try {
     
@@ -137,7 +111,6 @@ router.get('/courses', async (req, res) => {
   }
 });
 
-// ✅ POST a new course
 router.post('/', async (req, res) => {
   try {
     const { name, description, duration, fees, image,enquiryUrl } = req.body;
@@ -159,8 +132,6 @@ router.put("/courses/:id", async (req, res) => {
   }
 });
 
-
-// ✅ DELETE a course
 router.delete('/:id', async (req, res) => {
   try {
     await Course.findByIdAndDelete(req.params.id);
@@ -169,7 +140,6 @@ router.delete('/:id', async (req, res) => {
     res.status(400).json({ message: 'Error deleting course', error });
   }
 });
-
 
 router.get("/course-details/:courseId", async (req, res) => {
   try {
@@ -190,25 +160,5 @@ router.get("/course-details/:courseId", async (req, res) => {
     res.status(500).json({ error: "Server error", details: error.message });
   }
 });
-
-
-// router.get("/courses/:courseId/subjects", async (req, res) => {
-//   try {
-//     const { courseId } = req.params;
-
-//     // Fetch subjects linked to the course
-//     const course = await Course.findById(courseId).populate("subjects");
-
-//     if (!course) {
-//       return res.status(404).json({ error: "Course not found" });
-//     }
-
-//     res.json(course.subjects);
-//   } catch (error) {
-//     console.error("❌ Error fetching subjects:", error);
-//     res.status(500).json({ error: "Internal server error" });
-//   }
-// });
-
 
 module.exports = router;

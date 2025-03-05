@@ -32,20 +32,6 @@ router.post("/add-subject", async (req, res) => {
   }
 });
 
-
-// router.post("/upload-subjects", async (req, res) => {
-//   try {
-//     console.log("Received Data:", req.body); // Debugging
-//     // Your logic for handling the subject upload
-//     res.status(200).json({ message: "Subjects uploaded successfully" });
-//   } catch (error) {
-//     console.error("Error in /upload-subjects:", error);
-//     res.status(500).json({ error: "Internal Server Error" });
-//   }
-// });
-
-
-
 router.get("/subjects", async (req, res) => {
   try {
     const { branch, year, semester } = req.query;
@@ -95,9 +81,6 @@ router.get("/subjects", async (req, res) => {
   }
 });
 
-
-
-
 router.get("/:id/subjects", async (req, res) => {
   try {
     const { year, semester } = req.query;
@@ -132,8 +115,6 @@ router.get("/subjects/:id", async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 });
-
-
 
 module.exports = router;
 

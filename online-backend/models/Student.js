@@ -42,7 +42,7 @@ const StudentSchema = new mongoose.Schema({
         T5: { type: Number, default: 0 },
       },
       external: { type: Number, default: 0 },
-      grade: { type: String, default: "I" }, // Add grade field
+      grade: { type: String, default: "I" }, 
     },
   ],
 });

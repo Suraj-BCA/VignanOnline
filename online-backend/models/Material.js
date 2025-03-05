@@ -5,7 +5,7 @@ const MaterialSchema = new mongoose.Schema({
   year: Number,
   semester: Number,
   subject: { type: mongoose.Schema.Types.ObjectId, ref: "Subject" },
-  fileType: String, // "video", "ppt", "doc"
+  fileType: String, 
   filePath: String,
   uploadedAt: { type: Date, default: Date.now }
 });

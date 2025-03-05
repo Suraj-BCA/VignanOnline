@@ -4,8 +4,35 @@ const Student = require("../models/Student");
 const Course = require("../models/Course");
 const subject = require("../models/Subject");
 const multer = require('multer');
+const fs = require("fs");
+const path = require("path");
+
+const generateToken = require("../utils/authUtils"); 
+const verifyToken = require("../middleware/authMiddleware");
 
 const mongoose = require("mongoose")
+
+
+const upload = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => {
+      cb(null, "uploads/");
+    },
+    filename: (req, file, cb) => {
+      cb(null, `${Date.now()}_${file.originalname}`);
+    },
+  }),
+  limits: { fileSize: 50 * 1024 * 1024 },
+});
+
+
+
+// const upload = multer({ storage: storage, limits: { fileSize: 50 * 1024 * 1024 } }); // 50MB limit
+
+
+
+
+
 
 router.get("/all-students", async (req, res) => {
   try {
@@ -29,7 +56,6 @@ router.get("/all-students", async (req, res) => {
 router.get('/students', async (req, res) => {
   const { courseId, courseName, year, semester } = req.query;
 
-  // Validate query parameters
   if ((!courseId && !courseName) || !year || !semester) {
     return res.status(400).json({ error: 'Missing query parameters: courseId or courseName, year, and semester are required.' });
   }
@@ -37,22 +63,19 @@ router.get('/students', async (req, res) => {
   try {
     let course;
     if (courseId) {
-      // Use courseId directly
       course = { _id: new mongoose.Types.ObjectId(courseId) };
     } else {
-      // Find course by name
       course = await Course.findOne({ name: courseName });
       if (!course) {
         return res.status(404).json({ error: 'Course not found' });
       }
     }
 
-    // Find students by course ID, year, and semester
     const students = await Student.find({
       course: course._id,
       year: parseInt(year),
       semester: parseInt(semester),
-    });
+    }).populate("course", "name"); 
 
     res.status(200).json({ students });
   } catch (error) {
@@ -62,14 +85,7 @@ router.get('/students', async (req, res) => {
 });
 
 
-const upload = multer({ dest: "uploads/" });
-
-const storage = multer.diskStorage({
-  destination: "./uploads/", // Folder where images will be stored
-  filename: (req, file, cb) => {
-    cb(null, Date.now() + path.extname(file.originalname)); // Unique file name
-  },
-});
+// const upload = multer({ dest: "uploads/" });
 
 
 router.put("/student-profile/:email", upload.single("image"), async (req, res) => {
@@ -100,10 +116,10 @@ router.put("/student-profile/:email", upload.single("image"), async (req, res) =
   }
 });
 
-router.get("/student-dashboard/:email", async (req, res) => {
+router.get("/student-dashboard/:email" ,verifyToken, async (req, res) => {
   try {
     const { email } = req.params;
-    const { type } = req.query; // Read query param: `?type=image`
+    const { type } = req.query; 
 
     const student = await Student.findOne({ email })
       .populate("course") // Fetch course details
@@ -235,9 +251,6 @@ router.get("/api/get-marks/:rollNumber/:year/:semester", async (req, res) => {
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
-
-
-
 
 
 router.get("/student/:rollNumber", async (req, res) => {
@@ -511,7 +524,15 @@ router.get("/students-with-i-grade", async (req, res) => {
     res.status(500).json({ message: "Failed to fetch students." });
   }
 });
-
+router.get("/students/count", async (req, res) => {
+  const { course } = req.query;
+  try {
+    const count = await Student.countDocuments({ course });
+    res.json({ count });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch student count" });
+  }
+});
 
 router.get("/student/:id", async (req, res) => {
   try {
@@ -619,38 +640,30 @@ router.get("/student/:id", async (req, res) => {
 router.put("/update-student/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    let updateData = req.body;
+    const { firstName, lastName, email, phone, rollNumber, password, course, year, semester } = req.body;
 
-    // ✅ Ensure course is an ObjectId
-    if (updateData.course && typeof updateData.course === "string") {
-      const courseData = await Course.findOne({ name: updateData.course });
-      if (courseData) {
-        updateData.course = courseData._id; // Convert to ObjectId
-      } else {
-        return res.status(400).json({ error: "Invalid Course Name" });
-      }
+    if (!firstName || !lastName || !email || !phone || !rollNumber || !password || !course || !year || !semester) {
+      return res.status(400).json({ error: "All fields are required" });
     }
 
-    // Fetch the existing student document
-    const existingStudent = await Student.findById(id);
-    if (!existingStudent) {
+    if (!mongoose.Types.ObjectId.isValid(course)) {
+      return res.status(400).json({ error: "Invalid course ID" });
+    }
+
+    const updatedStudent = await Student.findByIdAndUpdate(
+      id,
+      { firstName, lastName, email, phone, rollNumber, password, course, year, semester },
+      { new: true }
+    ).populate("course", "name");
+
+    if (!updatedStudent) {
       return res.status(404).json({ error: "Student not found" });
     }
 
-    // Preserve the marks array
-    updateData.marks = existingStudent.marks;
-
-    console.log("📝 Final Update Data:", updateData);
-
-    // Update the student document
-    const updatedStudent = await Student.findByIdAndUpdate(id, updateData, {
-      new: true,
-    });
-
-    res.json(updatedStudent);
+    res.status(200).json(updatedStudent);
   } catch (error) {
-    console.error("🔥 Error updating student:", error);
-    res.status(500).json({ error: "Internal Server Error" });
+    console.error("Error updating student:", error);
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -676,22 +689,38 @@ router.delete("/delete-student/:id", async (req, res) => {
   }
 });
 
+router.post("/delete-students", async (req, res) => {
+  try {
+    const { ids } = req.body;
+    await Student.deleteMany({ _id: { $in: ids } });
+    res.status(200).json({ message: "Students deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting students:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
 
 router.post("/student-login", async (req, res) => {
   try {
     const { email, password } = req.body;
 
+    // Find the student by email
     const student = await Student.findOne({ email });
 
     if (!student) {
       return res.status(404).json({ error: "Student not found" });
     }
 
+    // Check if the password matches
     if (student.password !== password) {
       return res.status(400).json({ error: "Incorrect password" });
     }
 
-    res.status(200).json({ message: "Login successful!", student });
+    // Generate a token
+    const token = generateToken(student);
+
+    // Return the token and student data
+    res.status(200).json({ message: "Login successful!", student, token });
   } catch (error) {
     console.error("🔥 Server Error:", error);
     res.status(500).json({ error: "Server error" });
@@ -923,7 +952,6 @@ router.get("/student-info", async (req, res) => {
 // const storage = multer.memoryStorage();
 // const upload = multer({ storage });
 
-// Upload Route for Excel File
 router.post("/student/upload-marks", async (req, res) => {
   const { branch, year, semester, subject, marks } = req.body;
 
@@ -1047,5 +1075,95 @@ router.put("/student/calculate-grade", async (req, res) => {
 
 
 
+const generateRollNumber = async (courseName) => {
+  const currentYear = new Date().getFullYear().toString().slice(-2); 
+  const coursePrefix = courseName.slice(0, 2).toUpperCase(); 
+  const prefix = `${currentYear}1${coursePrefix}010`; 
 
+  const latestStudent = await Student.findOne({ rollNumber: new RegExp(`^${prefix}`) })
+    .sort({ rollNumber: -1 })
+    .exec();
+
+  let nextNumber = 1; 
+  if (latestStudent) {
+    const lastRollNumber = latestStudent.rollNumber;
+    const lastIncrementalPart = lastRollNumber.slice(-2); 
+    nextNumber = parseInt(lastIncrementalPart, 10) + 1; 
+  }
+
+  const incrementalPart = nextNumber.toString().padStart(2, "0");
+
+  const rollNumber = `${prefix}${incrementalPart}`;
+  return rollNumber;
+};
+
+router.post("/addd-student", upload.single("image"), async (req, res) => {
+  try {
+    const {
+      firstName,
+      lastName,
+      email,
+      phone,
+      address,
+      gender,
+      dob,
+      fatherName,
+      motherName,
+      course,
+      year,
+      semester,
+      password,
+    } = req.body;
+
+    const selectedCourse = await Course.findById(course);
+    if (!selectedCourse) {
+      return res.status(400).json({ error: "Invalid course selected" });
+    }
+
+    const rollNumber = await generateRollNumber(selectedCourse.name);
+
+    console.log("Student Email:", email);
+    console.log("Student Roll Number:", rollNumber);
+    console.log("Student Password:", password);
+
+    const newStudent = new Student({
+      rollNumber,
+      firstName,
+      lastName,
+      email,
+      phone,
+      address,
+      gender,
+      dob,
+      fatherName,
+      motherName,
+      image: req.file ? req.file.path : null, 
+      joiningDate: new Date(),
+      password,
+      course,
+      year,
+      semester,
+    });
+
+    await newStudent.save();
+
+    await Course.findByIdAndUpdate(course, {
+      $push: { students: newStudent._id },
+    });
+
+    res.status(201).json({ message: "Student added successfully!", student: newStudent });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.get("/students/count", async (req, res) => {
+  try {
+    const { course } = req.query;
+    const count = await Student.countDocuments({ course });
+    res.status(200).json({ count });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 module.exports = router;

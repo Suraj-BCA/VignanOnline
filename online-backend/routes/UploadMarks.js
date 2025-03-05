@@ -9,18 +9,14 @@ router.post("/upload-marks", upload.single("file"), (req, res) => {
   const filePath = req.file.path;
 
   try {
-    // Read the uploaded file
     const workbook = xlsx.readFile(filePath);
     const sheetName = workbook.SheetNames[0];
     const worksheet = workbook.Sheets[sheetName];
 
-    // Convert sheet to JSON with headers
     const jsonData = xlsx.utils.sheet_to_json(worksheet, { header: 1 });
 
-    // Extract headers (first row)
     const headers = jsonData[0];
 
-    // Find the dynamic column header (e.g., T1, T2, External, etc.)
     const marksHeader = headers.find((header) =>
       ["T1", "T2", "T3", "T4", "T5", "External"].includes(header)
     );
@@ -29,13 +25,11 @@ router.post("/upload-marks", upload.single("file"), (req, res) => {
       return res.status(400).json({ error: "No valid marks column found (e.g., T1, T2, External)." });
     }
 
-    // Get the index of the marks column
     const marksIndex = headers.indexOf(marksHeader);
 
-    // Process the data (skip the first row as it contains headers)
     const marksData = jsonData.slice(1).map((row) => ({
-      rollNumber: row[0], // First column: Roll Number
-      [marksHeader]: row[marksIndex], // Dynamic marks column (e.g., T1, T2, External)
+      rollNumber: row[0], 
+      [marksHeader]: row[marksIndex], 
       courseId,
       year,
       semester,
@@ -44,10 +38,6 @@ router.post("/upload-marks", upload.single("file"), (req, res) => {
       module,
       test,
     }));
-
-    // Save marksData to the database (example)
-    // await MarksModel.insertMany(marksData);
-
     res.status(200).json({ message: "Marks uploaded successfully!", data: marksData });
   } catch (error) {
     console.error("Error processing file:", error);

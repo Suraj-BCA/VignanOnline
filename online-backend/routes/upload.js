@@ -1,17 +1,18 @@
 const express = require("express");
 const multer = require("multer");
 const router = express.Router();
-const Material = require("../models/Material"); // Import Material model (Create if needed)
+const Material = require("../models/Material"); 
+const path = require("path");
 
-// Configure multer for file uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, "uploads/"); // Save files in 'uploads' folder
+    cb(null, "uploads/"); 
   },
   filename: (req, file, cb) => {
     cb(null, Date.now() + "-" + file.originalname);
   },
 });
+
 
 const upload = multer({ storage });
 
@@ -33,7 +34,7 @@ router.post("/upload-material", upload.single("file"), async (req, res) => {
       filePath: req.file.path,
     });
 
-    await newMaterial.save(); // Save file details in MongoDB
+    await newMaterial.save(); 
     console.log("✅ Material Saved in DB:", newMaterial);
 
     res.status(200).json({ message: "File uploaded successfully!", material: newMaterial });
@@ -44,8 +45,6 @@ router.post("/upload-material", upload.single("file"), async (req, res) => {
 });
 
 
-const path = require("path");
-
 
 router.get("/materials", async (req, res) => {
   try {
@@ -53,16 +52,12 @@ router.get("/materials", async (req, res) => {
 
     const baseUrl = "http://localhost:5000/";
     const formattedMaterials = materials.map((material) => {
-      // Extract actual file name
       let fileName = material.filePath ? path.basename(material.filePath) : "Untitled File";
 
-      // ✅ Remove timestamp prefix (assuming it follows a pattern like '1739378098908-Filename.ext')
-      fileName = fileName.replace(/^\d{13}-/, ""); // Removes 13-digit timestamp followed by '-'
+      fileName = fileName.replace(/^\d{13}-/, ""); 
 
-      // Extract file extension
       const fileExtension = fileName.split(".").pop().toLowerCase();
 
-      // Determine file type based on extension
       let fileType = "Unknown Type";
       if (["mp4", "mov", "avi"].includes(fileExtension)) fileType = "video";
       else if (["ppt", "pptx"].includes(fileExtension)) fileType = "ppt";
@@ -84,11 +79,5 @@ router.get("/materials", async (req, res) => {
     res.status(500).json({ error: "Failed to fetch materials" });
   }
 });
-
-
-
-
-
-
 
 module.exports = router;

@@ -30,7 +30,6 @@ router.post("/upload-students", upload.single("file"), async (req, res) => {
 
     console.log("📄 Excel Data:", data);
 
-    // Process each row in the Excel sheet
     const savedStudents = [];
     for (const row of data) {
       try {
@@ -52,13 +51,11 @@ router.post("/upload-students", upload.single("file"), async (req, res) => {
 
         console.log("🔍 Processing Row:", row);
 
-        // Validate required fields
         if (!email || !rollNumber) {
           console.log("❌ Missing required fields in row:", row);
           continue;
         }
 
-        // Check if the student already exists
         const existingEmail = await Student.findOne({ email });
         const existingRollNumber = await Student.findOne({ rollNumber });
 
@@ -67,7 +64,6 @@ router.post("/upload-students", upload.single("file"), async (req, res) => {
           continue;
         }
 
-        // Create a new student
         const newStudent = new Student({
           firstName,
           lastName,
@@ -77,7 +73,7 @@ router.post("/upload-students", upload.single("file"), async (req, res) => {
           year,
           semester,
           password,
-          joiningDate: new Date(), // Set joining date to the current date
+          joiningDate: new Date(), 
           dob,
           gender,
           fatherName,
@@ -88,7 +84,6 @@ router.post("/upload-students", upload.single("file"), async (req, res) => {
 
         console.log("💾 Saving Student:", newStudent);
 
-        // Save the student to the database
         await newStudent.save();
         savedStudents.push(newStudent);
 
@@ -98,10 +93,8 @@ router.post("/upload-students", upload.single("file"), async (req, res) => {
       }
     }
 
-    // Delete the uploaded file after processing
     fs.unlinkSync(filePath);
 
-    // Send success response
     res.status(201).json({
       message: "✅ Students uploaded successfully!",
       savedStudents,

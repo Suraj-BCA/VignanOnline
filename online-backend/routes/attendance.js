@@ -2,7 +2,6 @@ const express = require("express");
 const router = express.Router();
 const Attendance = require("../models/Attendance");
 
-// 📌 Save Attendance
 router.post("/save", async (req, res) => {
   try {
     const { branch, year, semester, date, attendance } = req.body;
@@ -11,7 +10,6 @@ router.post("/save", async (req, res) => {
       return res.status(400).json({ error: "All fields are required." });
     }
 
-    // Check if attendance already exists for this date
     const existingAttendance = await Attendance.findOne({ branch, year, semester, date });
 
     if (existingAttendance) {
@@ -20,7 +18,6 @@ router.post("/save", async (req, res) => {
       return res.json({ message: "Attendance updated successfully." });
     }
 
-    // Save new attendance record
     const newAttendance = new Attendance({ branch, year, semester, date, attendance });
     await newAttendance.save();
     res.json({ message: "Attendance saved successfully." });
@@ -31,7 +28,6 @@ router.post("/save", async (req, res) => {
   }
 });
 
-// 📌 Get Attendance by Branch, Year, Semester & Date
 router.get("/fetch", async (req, res) => {
   try {
     const { branch, year, semester, date } = req.query;
@@ -56,23 +52,21 @@ router.get("/fetch", async (req, res) => {
 router.get("/student-attendance", async (req, res) => {
   const { branch, year, semester, rollNumber } = req.query;
 
-  console.log("Query Parameters:", { branch, year, semester, rollNumber }); // Debugging
+  console.log("Query Parameters:", { branch, year, semester, rollNumber });
 
   if (!branch || !year || !semester || !rollNumber) {
     return res.status(400).json({ error: "Branch, year, semester, and rollNumber are required." });
   }
 
   try {
-    // Fetch all attendance records for the student's branch, year, and semester
     const attendanceRecords = await Attendance.find({ branch, year, semester });
 
-    console.log("Attendance Records:", attendanceRecords); // Debugging
+    console.log("Attendance Records:", attendanceRecords);
 
     if (!attendanceRecords.length) {
       return res.status(404).json({ message: "No attendance records found." });
     }
 
-    // Calculate total classes and attended classes for the student
     let totalClasses = 0;
     let attendedClasses = 0;
 
@@ -88,13 +82,12 @@ router.get("/student-attendance", async (req, res) => {
       }
     });
 
-    console.log("Total Classes:", totalClasses); // Debugging
-    console.log("Attended Classes:", attendedClasses); // Debugging
+    console.log("Total Classes:", totalClasses);
+    console.log("Attended Classes:", attendedClasses);
 
-    // Calculate attendance percentage
     const attendancePercentage = totalClasses > 0 ? ((attendedClasses / totalClasses) * 100).toFixed(2) : 0;
 
-    console.log("Attendance Percentage:", attendancePercentage); // Debugging
+    console.log("Attendance Percentage:", attendancePercentage);
 
     res.json({ percentage: attendancePercentage });
   } catch (error) {

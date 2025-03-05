@@ -5,8 +5,6 @@ const Faculty = require("../models/Faculty");
 const Course = require('../models/Course');
 
 
-
-
 router.post("/add-faculty", async (req, res) => {
     try {
       const newFaculty = new Faculty({
@@ -22,7 +20,6 @@ router.post("/add-faculty", async (req, res) => {
     }
   });
   
-  
   router.get('/all-faculty', async (req, res) => {
     try {
       const faculty = await Faculty.find();
@@ -31,7 +28,6 @@ router.post("/add-faculty", async (req, res) => {
       res.status(500).json({ error: 'Error fetching faculty data' });
     }
   });
-  
   
   router.put('/update-faculty/:id', async (req, res) => {
     try {
@@ -42,7 +38,6 @@ router.post("/add-faculty", async (req, res) => {
     }
   });
   
-  
   router.delete('/delete-faculty/:id', async (req, res) => {
     try {
       await Faculty.findByIdAndDelete(req.params.id);
@@ -51,8 +46,6 @@ router.post("/add-faculty", async (req, res) => {
       res.status(500).json({ error: 'Error deleting faculty' });
     }
   });
-  
-
 
   router.get("/all-students/:facultyId", async (req, res) => {
     try {
@@ -68,10 +61,9 @@ router.post("/add-faculty", async (req, res) => {
     }
   });
   
-
   router.get("/faculty-details", async (req, res) => {
     try {
-      const faculty = await Faculty.findOne(); // Fetch first faculty
+      const faculty = await Faculty.findOne(); 
       if (!faculty) {
         return res.status(404).json({ message: "Faculty not found" });
       }
@@ -85,7 +77,6 @@ router.post("/add-faculty", async (req, res) => {
     }
   });
 
-  // 📌 Faculty ke assigned courses fetch karna
 router.get("/faculty-courses/:facultyId", async (req, res) => {
   try {
     const faculty = await Faculty.findById(req.params.facultyId).populate(
@@ -98,7 +89,6 @@ router.get("/faculty-courses/:facultyId", async (req, res) => {
   }
 });
 
-// 📌 Selected Course ke available years fetch karna
 router.get("/course-years/:courseId", async (req, res) => {
   try {
     const course = await Course.findById(req.params.courseId);
@@ -111,7 +101,6 @@ router.get("/course-years/:courseId", async (req, res) => {
   }
 });
 
-// 📌 Selected Year ke available semesters fetch karna
 router.get("/course-semesters/:courseId/:year", async (req, res) => {
   try {
     const { courseId, year } = req.params;
@@ -131,7 +120,6 @@ router.get("/course-semesters/:courseId/:year", async (req, res) => {
   }
 });
 
-// 📌 Selected Semester ke available subjects fetch karna
 router.get("/course-subjects/:courseId/:year/:semester", async (req, res) => {
   try {
     const { courseId, year, semester } = req.params;
@@ -148,8 +136,6 @@ router.get("/course-subjects/:courseId/:year/:semester", async (req, res) => {
   }
 });
 
-
-
 router.post('/faculty-login', async (req, res) => {
   const { email, password } = req.body;
 
@@ -160,7 +146,6 @@ router.post('/faculty-login', async (req, res) => {
           return res.status(404).json({ message: 'Faculty not found' });
       }
 
-      // Direct string comparison since no hashing is used
       if (faculty.password !== password) {
           return res.status(400).json({ message: 'Invalid credentials' });
       }
@@ -171,6 +156,4 @@ router.post('/faculty-login', async (req, res) => {
   }
 });
 
-  
-  
 module.exports = router;  
